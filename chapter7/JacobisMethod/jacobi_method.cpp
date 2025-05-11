@@ -8,7 +8,7 @@ on square matrices only.
 
 // At the top of the file
 template <class T>
-void jacobi_method_serial(T** mtx, int m, const int n, T* b, T* x, int max_iter = 1000, T tol = 1e-6);
+void jacobi_method_serial(T** mtx, int m, const int n, T* b, T* x, int max_iter = 1000, T tol = 1e-3);
 
 
 
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
 
     double *x = new double[4]{0, 0, 0, 0};
 
-    jacobi_method_serial(mtx, n, n, b, x, 1000, 1e-6);
+    jacobi_method_serial(mtx, n, n, b, x, 9, 1e-3);
 
     for (int i = 0; i < n; i++) {
         std::cout << x[i] << " ";
