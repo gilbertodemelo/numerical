@@ -20,38 +20,54 @@ void jacobi_method_omp(T** mtx, int m, const int n, T* b, T* x, int max_iter = 1
 int main(int argc, char *argv[]) {
 
 
+    int n = 50000;
+    double **mtx = generateMatrix<double>(n, n);
 
-    const int n = 4;
-    double** mtx = new double*[n];
-    for (int i = 0; i < n; ++i) {
-        mtx[i] = new double[n];
+    for (int i = 0; i < n; i++) {
+    double sum = 0;
+    for (int j = 0; j < n; j++) {
+        if (i != j) {
+            mtx[i][j] = ((double)rand() / RAND_MAX) * 20.0 - 10.0;
+            sum += std::abs(mtx[i][j]);
+        }
     }
+    mtx[i][i] = sum + ((double)rand() / RAND_MAX) * 10.0 + 1.0; // guarantees diagonal dominance
+}
 
-    // Initialize matrix manually
-    mtx[0][0] = 10;  mtx[0][1] = -2;  mtx[0][2] =  2;  mtx[0][3] =  0;
-    mtx[1][0] = -1;  mtx[1][1] = 11;  mtx[1][2] = -1;  mtx[1][3] =  3;
-    mtx[2][0] =  2;  mtx[2][1] = -1;  mtx[2][2] = 10;  mtx[2][3] = -1;
-    mtx[3][0] =  0;  mtx[3][1] =  3;  mtx[3][2] = -1;  mtx[3][3] =  8;
+
 
     double *b = new double[n];
-    b[0] = 6; b[1] = 25; b[2] = -11; b[3] = 15;
+    double *x = new double[n]{};
+    double *x_omp = new double[n]{};
 
-    double *x = new double[4]{0, 0, 0, 0};
-    double *x_omp = new double[4]{0, 0, 0, 0};
+// Inicializa b com valores aleatórios entre -100 e 100, por exemplo:
+for (int i = 0; i < n; ++i) {
+    b[i] = ((double)rand() / RAND_MAX) * 200.0 - 100.0;
+}
 
+    double start, end;
+
+    start = omp_get_wtime();
     jacobi_method_serial(mtx, n, n, b, x, 1000, 1e-6);
+    end = omp_get_wtime();
 
-    for (int i = 0; i < n; i++) {
-        std::cout << x[i] << " ";
-    }
-    std::cout << "\n";
+    std::cout << "Serial version took " << (end - start) << " seconds.\n";
 
+    // for (int i = 0; i < n; i++) {
+    //     std::cout << x[i] << " ";
+    // }
+    // std::cout << "\n\n";
+
+    start = omp_get_wtime();
     jacobi_method_omp(mtx, n, n, b, x_omp, 1000, 1e-6);
+    end = omp_get_wtime();
 
-    for (int i = 0; i < n; i++) {
-        std::cout << x_omp[i] << " ";
-    }
-    std::cout << "\n";
+    std::cout << "OpenMP version took " << (end - start) << " seconds.\n";
+
+    // for (int i = 0; i < n; i++) {
+    //     std::cout << x_omp[i] << " ";
+    // }
+    // std::cout << "\n\n";
 
 
     
@@ -64,35 +80,37 @@ template <class T>
 void jacobi_method_omp(T** mtx, int m, const int n, T* b, T* x, int max_iter, T tol) {
     T * x_new = new T[n];
 
-    
-        for (int k = 0; k < max_iter; k++) {
-            #pragma omp parallel for
-            for (int i = 0; i < n; i++) {
-                T sum = 0;
-                for (int j = 0; j < n; j++) {
-                    if (j != i) {
-                        sum += mtx[i][j] * x[j];
-                    }
+    for (int k = 0; k < max_iter; k++) {
+        int i, j;  // <- declare fora do pragma
+
+        #pragma omp parallel for default(none) shared(mtx, x, b, x_new, n) private(i, j)
+        for (i = 0; i < n; i++) {
+            T sum = 0;
+            for (j = 0; j < n; j++) {
+                if (j != i) {
+                    sum += mtx[i][j] * x[j];
                 }
-                x_new[i] = (b[i] - sum) / mtx[i][i];
             }
-
-            // Check for the convergence
-            T error = 0;
-            for (int i = 0; i < n; i++) {
-                error += (x_new[i] - x[i]) * (x_new[i] - x[i]);
-                x[i] = x_new[i];
-            }
-
-            // if (sqrt(error) < tol) {
-            //     return nullptr;
-            // }
+            x_new[i] = (b[i] - sum) / mtx[i][i];
         }
 
-    
+        T error = 0.0;
+
+        #pragma omp parallel for default(none) shared(x, x_new, n) reduction(+:error) private(i)
+        for (i = 0; i < n; i++) {
+            T diff = x_new[i] - x[i];
+            error += diff * diff;
+            x[i] = x_new[i];
+        }
+
+        if (std::sqrt(error) < tol) {
+            break;
+        }
+    }
 
     delete[] x_new;
 }
+
 
 
 template <class T>
