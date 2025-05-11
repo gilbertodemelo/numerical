@@ -1,4 +1,5 @@
 #include <iostream>
+#include <omp>
 #include "/Users/gilbertodemelojr/Documents/programming/cplusplus/NumericalAnalysis/MatrixGenerator/MatrixGenerator.cpp"
 
 /*
@@ -8,7 +9,8 @@ on square matrices only.
 
 // At the top of the file
 template <class T>
-void jacobi_method_serial(T** mtx, int m, const int n, T* b, T* x, int max_iter = 1000, T tol = 1e-3);
+void jacobi_method_serial(T** mtx, int m, const int n, T* b, T* x, int max_iter = 1000, T tol = 1e-6);
+void jacobi_method_omp(T** mtx, int m, const int n, T* b, T* x, int max_iter = 1000, T tol = 1e-3);
 
 
 
@@ -45,6 +47,35 @@ int main(int argc, char *argv[]) {
 
 
     return 0;
+}
+
+template <class T>
+void jacobi_method_omp(T** mtx, int m, const int n, T* b, T* x, int max_iter = 1000, T tol = 1e-3) {
+    T * x_new = new T[n];
+    for (int k = 0; k < max_iter; k++) {
+        for (int i = 0; i < n; i++) {
+            T sum = 0;
+            for (int j = 0; j < n; j++) {
+                if (j != i) {
+                    sum += mtx[i][j] * x[j];
+                }
+            }
+            x_new[i] = (b[i] - sum) / mtx[i][i];
+        }
+
+        // Check for the convergence
+        T error = 0;
+        for (int i = 0; i < n; i++) {
+            error += (x_new[i] - x[i]) * (x_new[i] - x[i]);
+            x[i] = x_new[i];
+        }
+
+        if (sqrt(error) < tol) {
+            break;
+        }
+    }
+
+    delete[] x_new;
 }
 
 
