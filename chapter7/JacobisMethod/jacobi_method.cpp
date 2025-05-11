@@ -1,5 +1,6 @@
 #include <iostream>
-#include <omp>
+#include <omp.h>
+#include <cmath>
 #include "/Users/gilbertodemelojr/Documents/programming/cplusplus/NumericalAnalysis/MatrixGenerator/MatrixGenerator.cpp"
 
 /*
@@ -10,6 +11,8 @@ on square matrices only.
 // At the top of the file
 template <class T>
 void jacobi_method_serial(T** mtx, int m, const int n, T* b, T* x, int max_iter = 1000, T tol = 1e-6);
+
+template <class T>
 void jacobi_method_omp(T** mtx, int m, const int n, T* b, T* x, int max_iter = 1000, T tol = 1e-3);
 
 
@@ -34,11 +37,19 @@ int main(int argc, char *argv[]) {
     b[0] = 6; b[1] = 25; b[2] = -11; b[3] = 15;
 
     double *x = new double[4]{0, 0, 0, 0};
+    double *x_omp = new double[4]{0, 0, 0, 0};
 
-    jacobi_method_serial(mtx, n, n, b, x, 9, 1e-3);
+    jacobi_method_serial(mtx, n, n, b, x, 1000, 1e-6);
 
     for (int i = 0; i < n; i++) {
         std::cout << x[i] << " ";
+    }
+    std::cout << "\n";
+
+    jacobi_method_omp(mtx, n, n, b, x_omp, 1000, 1e-6);
+
+    for (int i = 0; i < n; i++) {
+        std::cout << x_omp[i] << " ";
     }
     std::cout << "\n";
 
@@ -50,30 +61,35 @@ int main(int argc, char *argv[]) {
 }
 
 template <class T>
-void jacobi_method_omp(T** mtx, int m, const int n, T* b, T* x, int max_iter = 1000, T tol = 1e-3) {
+void jacobi_method_omp(T** mtx, int m, const int n, T* b, T* x, int max_iter, T tol) {
     T * x_new = new T[n];
-    for (int k = 0; k < max_iter; k++) {
-        for (int i = 0; i < n; i++) {
-            T sum = 0;
-            for (int j = 0; j < n; j++) {
-                if (j != i) {
-                    sum += mtx[i][j] * x[j];
+
+    
+        for (int k = 0; k < max_iter; k++) {
+            #pragma omp parallel for
+            for (int i = 0; i < n; i++) {
+                T sum = 0;
+                for (int j = 0; j < n; j++) {
+                    if (j != i) {
+                        sum += mtx[i][j] * x[j];
+                    }
                 }
+                x_new[i] = (b[i] - sum) / mtx[i][i];
             }
-            x_new[i] = (b[i] - sum) / mtx[i][i];
+
+            // Check for the convergence
+            T error = 0;
+            for (int i = 0; i < n; i++) {
+                error += (x_new[i] - x[i]) * (x_new[i] - x[i]);
+                x[i] = x_new[i];
+            }
+
+            // if (sqrt(error) < tol) {
+            //     return nullptr;
+            // }
         }
 
-        // Check for the convergence
-        T error = 0;
-        for (int i = 0; i < n; i++) {
-            error += (x_new[i] - x[i]) * (x_new[i] - x[i]);
-            x[i] = x_new[i];
-        }
-
-        if (sqrt(error) < tol) {
-            break;
-        }
-    }
+    
 
     delete[] x_new;
 }
@@ -101,7 +117,7 @@ void jacobi_method_serial(T **mtx, int m, const int n, T *b, T *x, int max_iter,
             x[i] = x_new[i];
         }
 
-        if (sqrt(error) < tol) {
+        if (std::sqrt(error) < tol) {
             break;
         }
     }
