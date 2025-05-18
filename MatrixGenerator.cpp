@@ -23,10 +23,10 @@ T **generateMatrix(const int m, const int n) {
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
             if (std::is_floating_point<T>::value) {
-                // Valor aleatório de ponto flutuante entre 0.0 e 100.0
+                // random flating point value between 0.00 and 99.99
                 mtx[i][j] = static_cast<T>(rand()) / RAND_MAX * 100.0;
             } else {
-                // Valor inteiro entre 0 e 99
+                // integer value between 0 and 99
                 mtx[i][j] = rand() % 100;
             }
         }

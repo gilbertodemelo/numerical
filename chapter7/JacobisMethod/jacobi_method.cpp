@@ -20,7 +20,7 @@ void jacobi_method_omp(T** mtx, int m, const int n, T* b, T* x, int max_iter = 1
 int main(int argc, char *argv[]) {
 
 
-    int n = 50000;
+    int n = 20480;
     double **mtx = generateMatrix<double>(n, n);
 
     for (int i = 0; i < n; i++) {
